@@ -7,6 +7,7 @@ const UserSchema = new mongoose.Schema(
     email: String,
     role: String,
     tokens: [],
+    likes: [],
     followers: [],
     verified: {
       type: Boolean,

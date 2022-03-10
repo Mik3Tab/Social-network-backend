@@ -2,11 +2,8 @@ const Post = require("../models/Post");
 const User = require("../models/User");
 const PostController = {
   async find(req, res) {
-    const { page = 1, limit = 10 } = req.query;
-    const posts = await Post.find().populate("userId","id")
-      .limit(limit)
-      .skip((page - 1) * limit);
-    res.send(posts);
+    const posts = await Post.find().populate("userId")
+    res.send(posts.reverse());
   },
   async create(req, res) {
     try {
@@ -14,8 +11,7 @@ const PostController = {
         ...req.body,
         userId: req.user._id,
         userName: req.user.name,
-        title: req.body.title(),
-      });
+      })
       await User.findByIdAndUpdate(req.user._id, {
         $push: { postId: post._id },
       });
@@ -25,10 +21,11 @@ const PostController = {
     }
   },
   async findByTitle(req, res) {
+    const title = new RegExp(`${req.params.title}`, 'i')
     const post = await Post.aggregate([
       {
         $match: {
-          title: req.params.title.toLowerCase(),
+          title
         },
       },
     ]);
@@ -56,35 +53,42 @@ const PostController = {
   },
   async delete(req, res) {
     try {
-      await Post.findByIdAndDelete(req.params._id);
-      res.send("Post has been deleted");
+      const post = await Post.findByIdAndDelete(req.params._id);
+      console.log('post',post)
+      res.send({message:"Post has been deleted",_id:req.params._id});
     } catch (error) {
       console.log(error);
     }
   },
   async like(req, res) {
     try {
-      const post = await Post.findByIdAndUpdate(req.params._id);
-      const user = post.userId.toString();
-      if (post.likes.indexOf(user) == -1) {
-        post.likes.push(user);
-        post.save();
-        return res.send({ message: "+1 like", post });
-      } else {
-        return res.send({ message: "Already like given" });
-      }
+      const post = await Post.findByIdAndUpdate(
+        req.params._id,
+        { $push: { likes: req.user._id } },
+        { new: true }
+      );
+      await User.findByIdAndUpdate(
+        req.user._id,
+        { $push: { likes: req.params._id } },
+        { new: true }
+      );
+      res.send(post);
     } catch (error) {
       console.log(error);
     }
   },
   async dislike(req, res) {
     try {
-      const post = await Post.findById(req.params._id);
-      const user = post.userId.toString();
-      if (post.likes.indexOf(user) != -1) {
-        post.likes.splice(post.likes.indexOf(user), 1);
-      }
-      post.save();
+      const post = await Post.findByIdAndUpdate(
+        req.params._id,
+        { $pull: { likes: req.user._id } },
+        { new: true }
+      );
+      await User.findByIdAndUpdate(
+        req.user._id,
+        { $pull: { likes: req.params._id } },
+        { new: true }
+      );
       res.send(post);
     } catch (error) {
       console.log(error);

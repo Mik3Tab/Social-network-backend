@@ -24,7 +24,7 @@ const UserController = {
       const hash = bcrypt.hashSync(req.body.password, 10);
       const user = await User.create({ ...req.body, password: hash,role:'user',verified:false });
       const emailToken = jwt.sign({ email: req.body.email }, jwt_secret);
-      const url = "http://localhost:3000/users/confirm/" + emailToken;
+      const url = "http://localhost:3001/users/confirm/" + emailToken;
       await transporter.sendMail({
         to: req.body.email,
         subject: "Account verification",
